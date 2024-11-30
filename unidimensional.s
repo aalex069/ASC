@@ -1,3 +1,5 @@
+.section .note.GNU-stack,"",@progbits
+
 .data
 	space: .space 1000
 	size: .long 0
@@ -10,6 +12,7 @@
 	format_scanf: .asciz "%d"
 	format_printf: .asciz "%d: (%d, %d)\n"
 	format_get: .asciz "(%d, %d)\n"
+	test: .asciz "%d\n"
 .text
 	ADD:
 		pushl %ebp
@@ -29,6 +32,7 @@
 		ADDstop:
 			movl %edx, right
 			movl %ebx, left
+			decl %edx
 			pushl %edx
 			pushl %ebx
 			pushl %eax
@@ -41,6 +45,45 @@
 			popl %ebx
 			popl %ebp
 			ret
+	GET:
+		pushl %ebp
+		movl %esp, %ebp
+		xorl %edx, %edx
+		movl $-1, %ebx
+		xorl %esi, %esi
+		xorl %ecx, %ecx
+		movl 8(%ebp), %ecx
+		GETloop:
+			cmp %cl, (%edi, %esi, 1)
+			je start
+			incl %esi
+			jmp GETloop
+		start:
+			cmp $-1, %ebx
+			je Left
+			cmp %cl, (%edi, %esi, 1)
+			jne GETstop
+			incl %edx
+			incl %esi
+			jmp start
+		Left:
+			movl %esi, %ebx
+			movl %esi, %edx
+			incl %esi
+			jmp start
+		GETstop:
+			pushl %edx
+			pushl %ebx
+			pushl %ecx
+			pushl $format_printf
+			call printf
+			popl %eax
+			popl %eax
+			popl %eax
+			popl %eax
+			popl %ebp
+			ret
+
 .global main
 main:
 	pushl $nr_op
@@ -48,13 +91,18 @@ main:
 	call scanf
 	popl %eax
 	popl %eax
-	
-	movl $0, %eax
-	leal space, %edi
-	movl $1000, %ecx
-	rep stosb
 
-	movl nr_op, %ecx
+	leal space, %edi
+	xorl %ecx, %ecx
+	looparray:
+		cmp $999, %ecx
+		je end 
+		movl $0, (%edi, %ecx, 1)
+		incl %ecx
+		jmp looparray
+
+	end:
+		movl nr_op, %ecx
 
 	operations:
 		cmp $0, %ecx
@@ -136,9 +184,23 @@ main:
 	oploop:
 		decl %ecx
 		jmp operations
-	delete:
-		jmp exit
 	get:
+		pushl %ecx
+		pushl $id
+		pushl $format_scanf
+		call scanf
+		popl %eax
+		popl %eax
+		popl %ecx
+
+		movl id, %ebx
+		pushl %ecx
+		pushl %ebx
+		call GET
+		popl %eax
+		popl %ecx
+		jmp oploop
+	delete:
 		jmp exit
 	defragmentation:
 		jmp exit
