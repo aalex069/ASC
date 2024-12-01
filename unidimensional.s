@@ -8,34 +8,63 @@
 	op: .long 0
 	nrf: .long 0
 	left: .long 0
-	right: .long 0
 	format_scanf: .asciz "%d"
 	format_printf: .asciz "%d: (%d, %d)\n"
 	format_get: .asciz "(%d, %d)\n"
+	error: .asciz "Not enough space\n"
 .text
 	ADD:
 		pushl %ebp
 		movl %esp, %ebp
 		pushl %ebx
 		xorl %eax, %eax
-		movl right, %ebx
-		movl %ebx, %edx
 		movl 8(%ebp), %ecx
-		movl 12(%ebp), %eax
+		xorl %ebx, %ebx
+		movl $1000, %edx
+		xorl %esi, %esi
+		cmp %edx, %ecx
+		ja impossible
+
+		ADDinterval:
+			xorl %eax, %eax
+			cmp $0, %edx
+			je impossible
+			cmp %bl, (%edi, %esi, 1)
+			je intervalSizeAux
+			decl %edx
+			incl %esi
+			jmp ADDinterval
+
+		intervalSizeAux:
+			movl %esi, left
+
+		intervalSize:
+			incl %eax
+			incl %esi
+			cmp %ecx, %eax
+			je stop 
+			cmp %bl, (%edi, %esi, 1)
+			je intervalSize
+			jmp ADDinterval
+			
+		stop:
+			movl 12(%ebp), %eax
+			movl left, %edx
+			movl left, %esi
+			movl left, %ebx
+			addl %ecx, %ebx
 
 		ADDloop:
 			cmp $0, %ecx
 			je ADDstop
-			movb %al, (%edi, %edx, 1)
-			incl %edx
+			movb %al, (%edi, %esi, 1)
+			incl %esi
 			loop ADDloop
 
 		ADDstop:
-			movl %edx, right
-			movl %ebx, left
-			decl %edx
-			pushl %edx
+			decl %ebx
 			pushl %ebx
+			pushl %edx
 			pushl %eax
 			pushl $format_printf
 			call printf
@@ -43,6 +72,11 @@
 			popl %eax
 			popl %eax
 			popl %eax
+			popl %ebx
+			popl %ebp
+			ret
+		
+		impossible:
 			popl %ebx
 			popl %ebp
 			ret
@@ -55,14 +89,16 @@
 		xorl %esi, %esi
 		xorl %ecx, %ecx
 		movl 8(%ebp), %ecx
-		GETloop:
 
+		GETloop:
+			cmp $999, %esi
+			je notFound
 			cmp %cl, (%edi, %esi, 1)
 			je start
 			incl %esi
 			jmp GETloop
-		start:
 
+		start:
 			cmp $-1, %ebx
 			je Left
 			cmp %cl, (%edi, %esi, 1)
@@ -70,14 +106,14 @@
 			incl %edx
 			incl %esi
 			jmp start
-		Left:
 
+		Left:
 			movl %esi, %ebx
 			movl %esi, %edx
 			incl %esi
 			jmp start
-		GETstop:
 
+		GETstop:
 			pushl %edx
 			pushl %ebx
 			pushl $format_get
@@ -87,6 +123,19 @@
 			popl %eax
 			popl %ebp
 			ret
+
+		notFound:
+			xorl %ebx, %ebx
+			pushl %ebx
+			pushl %ebx
+			pushl $format_get
+			call printf
+			popl %eax
+			popl %eax
+			popl %eax
+			popl %ebp
+			ret
+
 	DELETE:
 		pushl %ebp
 		movl %esp, %ebp
@@ -140,12 +189,14 @@
 		DELETEstop:
 			popl %ebp
 			ret
+
 	DEFRAGMENTATION:
 		pushl %ebp
 		movl %esp, %ebp
 		xorl %esi, %esi
 		movl $1, %ebx
 		xorl %edx, %edx
+
 		DEFRAGMENTATIONloop:
 			cmp $1, %ebx
 			jne DEFRAGMENTATIONstop
@@ -220,7 +271,6 @@
 		DEFRAGMENTATIONend:
 			popl %ebp
 			ret
-
 
 .global main
 main:
