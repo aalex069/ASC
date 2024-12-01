@@ -29,7 +29,7 @@
 			xorl %eax, %eax
 			cmp $0, %edx
 			je impossible
-			cmp %bl, (%edi, %esi, 1)
+			cmpb %bl, (%edi, %esi, 1)
 			je intervalSizeAux
 			decl %edx
 			incl %esi
@@ -43,7 +43,7 @@
 			incl %esi
 			cmp %ecx, %eax
 			je stop 
-			cmp %bl, (%edi, %esi, 1)
+			cmpb %bl, (%edi, %esi, 1)
 			je intervalSize
 			jmp ADDinterval
 			
@@ -93,7 +93,7 @@
 		GETloop:
 			cmp $999, %esi
 			je notFound
-			cmp %cl, (%edi, %esi, 1)
+			cmpb %cl, (%edi, %esi, 1)
 			je start
 			incl %esi
 			jmp GETloop
@@ -101,7 +101,7 @@
 		start:
 			cmp $-1, %ebx
 			je Left
-			cmp %cl, (%edi, %esi, 1)
+			cmpb %cl, (%edi, %esi, 1)
 			jne GETstop
 			incl %edx
 			incl %esi
@@ -145,10 +145,10 @@
 		DELETEloop:
 			cmp $999, %esi
 			je DELETEstop
-			cmp %bl, (%edi, %esi, 1)
+			cmpb %bl, (%edi, %esi, 1)
 			je DELETEid
 			movb (%edi, %esi, 1), %al
-			cmp $0, %al
+			cmpb $0, %al
 			je zero
 			jmp aux
 
@@ -167,7 +167,7 @@
 			movl %esi, %edx
 
 		DELETEout:
-			cmp %cl, (%edi, %esi, 1)
+			cmpb %cl, (%edi, %esi, 1)
 			jne DELETEoutput
 			incl %esi
 			incl %edx
@@ -203,7 +203,7 @@
 			cmp $999, %esi
 			jae DEFRAGMENTATIONstop
 			movb (%edi, %esi, 1), %dl
-			cmp $0, %dl
+			cmpb $0, %dl
 			je shiftLeftAux
 			incl %esi
 			jmp DEFRAGMENTATIONloop
@@ -223,7 +223,7 @@
 			movb %dl, (%edi, %ecx, 1)
 			incl %ecx
 			incl %eax
-			cmp $0, %dl
+			cmpb $0, %dl
 			jne testare
 			jmp shiftLeft
 
@@ -237,14 +237,14 @@
 		DEFRAGMENTATIONout:
 			movl $-1, %eax
 			movb (%edi, %esi, 1), %bl
-			cmp $0, %bl
+			cmpb $0, %bl
 			je DEFRAGMENTATIONend
 			jmp DEFRAGMENTATIONinterval
 		
 		DEFRAGMENTATIONinterval:
 			cmp $-1, %eax
 			je DEFRAGMENTATIONleft
-			cmp %bl, (%edi, %esi, 1)
+			cmpb %bl, (%edi, %esi, 1)
 			jne DEFRAGMENTATIONoutput
 			incl %esi
 			incl %ecx
@@ -286,7 +286,7 @@ main:
 	looparray:
 		cmp $1000, %ecx
 		je end 
-		movl $0, (%edi, %ecx, 1)
+		movb $0, (%edi, %ecx, 1)
 		incl %ecx
 		jmp looparray
 
