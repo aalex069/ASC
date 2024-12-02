@@ -8,8 +8,8 @@
 	op: .long 0
 	nrf: .long 0
 	left: .long 0
-    aux: .long 0
-    x: .long 0
+    	aux: .long 0
+    	x: .long 0
 	format_scanf: .asciz "%d"
 	format_printf: .asciz "%d:((%d, %d), (%d, %d))\n"
 	format_get: .asciz "((%d, %d), (%d, %d))\n"
@@ -24,39 +24,39 @@
 		movl %ecx, aux
 		xorl %ebx, %ebx
 		xorl %esi, %esi
-        movl $1000, %edx
+        	movl $1000, %edx
 		cmp %edx, %ecx
 		ja impossible
-        xorl %ecx, %ecx
-        jmp ADDinterval
+        	xorl %ecx, %ecx
+        	jmp ADDinterval
         
-        ADDlineAux:
-            movl $1000, %ebx
-            xorl %edx, %edx
-            movl %ecx, %eax
-            divl %ebx
-            movl %eax, %ecx
-            incl %ecx
-            xorl %edx, %edx
-            movl %ecx, %eax
-            mull %ebx
-            movl %eax, %ecx
-            xorl %ebx, %ebx
-            movl $1000, %edx
-            xorl %esi, %esi
+	        ADDlineAux:
+	            movl $1000, %ebx
+	            xorl %edx, %edx
+	            movl %ecx, %eax
+	            divl %ebx
+	            movl %eax, %ecx
+	            incl %ecx
+	            xorl %edx, %edx
+	            movl %ecx, %eax
+	            mull %ebx
+	            movl %eax, %ecx
+	            xorl %ebx, %ebx
+	            movl $1000, %edx
+	            xorl %esi, %esi
 
-        ADDline:
-            cmp $1000000, %ecx
-            jae ADDexit
+	        ADDline:
+	            cmp $1000000, %ecx
+	            jae ADDexit
 
 		ADDinterval:
 			xorl %eax, %eax
 			cmp $0, %edx
 			je ADDlineAux
-            addl %esi, %ecx
+            		addl %esi, %ecx
 			cmpb %bl, (%edi, %ecx, 1)
 			je intervalSizeAux
-            subl %esi, %ecx
+            		subl %esi, %ecx
 			decl %edx
 			incl %esi
 			jmp ADDinterval
@@ -64,20 +64,20 @@
 		intervalSizeAux:
 			movl %esi, left
 
-        ADDsubAux:
-            subl %esi, %ecx
+        	ADDsubAux:
+            		subl %esi, %ecx
 
 		intervalSize:
-            cmp $1000, %esi
-            je ADDlineAux
+            		cmp $1000, %esi
+            		je ADDlineAux
 			incl %eax
 			incl %esi
 			cmp aux, %eax
 			je stop 
-            addl %esi, %ecx
+            		addl %esi, %ecx
 			cmpb %bl, (%edi, %ecx, 1)
 			je ADDsubAux
-            subl %esi, %ecx
+            		subl %esi, %ecx
 			jmp ADDinterval
 			
 		stop:
@@ -88,32 +88,32 @@
 		ADDloop:
 			cmp $0, %edx
 			je ADDstop
-            addl %esi, %ecx
+            		addl %esi, %ecx
 			movb %al, (%edi, %ecx, 1)
-            subl %esi, %ecx
+            		subl %esi, %ecx
 			incl %esi
 			decl %edx
 			jmp ADDloop
 
 		ADDstop:
 			xorl %edx, %edx
-            movl %ecx, %eax
-            movl $1000, %ebx
-            divl %ebx
-            movl %eax, x
+           		movl %ecx, %eax
+           		movl $1000, %ebx
+            		divl %ebx
+            		movl %eax, x
 			xorl %edx, %edx
-            movl %ecx, %eax
-            addl left, %eax
-            divl %ebx
-            movl %edx, left
-            movl aux, %ebx
-            addl left, %ebx
-            decl %ebx
+            		movl %ecx, %eax
+            		addl left, %eax
+            		divl %ebx
+           		 movl %edx, left
+            		movl aux, %ebx
+            		addl left, %ebx
+            		decl %ebx
             
 			pushl %ebx
-            pushl x
-            pushl left
-            pushl x
+		        pushl x
+		        pushl left
+		        pushl x
 			pushl 12(%ebp)
 			pushl $format_printf
 			call printf
@@ -121,8 +121,8 @@
 			popl %eax
 			popl %eax
 			popl %eax
-            popl %eax
-            popl %eax
+            		popl %eax
+            		popl %eax
 			popl %ebx
 			popl %ebp
 			ret
@@ -132,8 +132,8 @@
 			popl %ebp
 			ret
         
-        ADDexit:
-            popl %ebx
+        	ADDexit:
+            		popl %ebx
 			popl %ebp
 			ret
     GET:
@@ -148,18 +148,18 @@
 		jmp GETloop
 
 		GETlineAux:
-            movl $1000, %ebx
-            xorl %edx, %edx
-            divl %ebx
-            incl %eax
-            xorl %edx, %edx
-            mull %ebx
-            movl $-1, %ebx
-            xorl %esi, %esi
+            		movl $1000, %ebx
+            		xorl %edx, %edx
+	            	divl %ebx
+	            	incl %eax
+	            	xorl %edx, %edx
+	            	mull %ebx
+	            	movl $-1, %ebx
+	            	xorl %esi, %esi
 
-        GETline:
-            cmp $1000000, %eax
-            jae notFound
+        	GETline:
+            		cmp $1000000, %eax
+            		jae notFound
 
 		GETloop:
 			cmp $1000, %esi
