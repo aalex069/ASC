@@ -8,10 +8,11 @@
 	op: .long 0
 	nrf: .long 0
 	left: .long 0
+	aux: .long 0
 	format_scanf: .asciz "%d"
 	format_printf: .asciz "%d: (%d, %d)\n"
 	format_get: .asciz "(%d, %d)\n"
-	error: .asciz "Not enough space\n"
+	
 .text
 	ADD:
 		pushl %ebp
@@ -19,6 +20,7 @@
 		pushl %ebx
 		xorl %eax, %eax
 		movl 8(%ebp), %ecx
+		movl %ecx, aux
 		xorl %ebx, %ebx
 		movl $1000, %edx
 		xorl %esi, %esi
@@ -41,7 +43,7 @@
 		intervalSize:
 			incl %eax
 			incl %esi
-			cmp %ecx, %eax
+			cmp aux, %eax
 			je stop 
 			cmpb %bl, (%edi, %esi, 1)
 			je intervalSize
@@ -49,19 +51,22 @@
 			
 		stop:
 			movl 12(%ebp), %eax
-			movl left, %edx
 			movl left, %esi
-			movl left, %ebx
-			addl %ecx, %ebx
+			movl 8(%ebp), %edx
 
 		ADDloop:
-			cmp $0, %ecx
+			cmp $0, %edx
 			je ADDstop
 			movb %al, (%edi, %esi, 1)
 			incl %esi
-			loop ADDloop
+			decl %edx
+			jmp ADDloop
 
 		ADDstop:
+			movl left, %edx
+			movl left, %ebx
+			addl aux, %ebx
+
 			decl %ebx
 			pushl %ebx
 			pushl %edx
@@ -91,7 +96,7 @@
 		movl 8(%ebp), %ecx
 
 		GETloop:
-			cmp $999, %esi
+			cmp $1000, %esi
 			je notFound
 			cmpb %cl, (%edi, %esi, 1)
 			je start
@@ -143,14 +148,14 @@
 		xorl %esi, %esi
 
 		DELETEloop:
-			cmp $999, %esi
+			cmp $1000, %esi
 			je DELETEstop
 			cmpb %bl, (%edi, %esi, 1)
 			je DELETEid
 			movb (%edi, %esi, 1), %al
 			cmpb $0, %al
 			je zero
-			jmp aux
+			jmp Aux
 
 		zero:
 			incl %esi
@@ -161,9 +166,9 @@
 			incl %esi
 			jmp DELETEloop
 
-		aux:
+		Aux:
 			movb (%edi, %esi, 1), %cl
-			movl %esi, %eax
+			movl %esi, left
 			movl %esi, %edx
 
 		DELETEout:
@@ -176,14 +181,15 @@
 		DELETEoutput:
 			decl %edx
 			pushl %edx
-			pushl %eax
+			pushl left
 			pushl %ecx
 			pushl $format_printf
 			call printf
-			popl %eax
-			popl %eax
-			popl %eax
-			popl %eax
+			popl %ebx
+			popl %ebx
+			popl %ebx
+			popl %ebx
+			movl 8(%ebp), %ebx
 			jmp DELETEloop
 
 		DELETEstop:
