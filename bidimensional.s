@@ -1,12 +1,12 @@
 .section .note.GNU-stack,"",@progbits
 
 .data
+	op: .long 0
 	space: .space 1048576
 	occupied: .space 2048
 	size: .long 0
 	id: .long 0
 	nr_op: .long 0
-	op: .long 0
 	nrf: .long 0
 	left: .long 0
 	aux: .long 0
@@ -14,10 +14,12 @@
 	line: .long 0
 	linedel: .long 0
 	column: .long 0
-	sizedefrag: .word 0
+	sizedefrag: .long 0
 	format_scanf: .asciz "%d"
+	format_scanfstr: .asciz "%s"
 	format_printf: .asciz "%d:((%d, %d), (%d, %d))\n"
 	format_get: .asciz "((%d, %d), (%d, %d))\n"
+	format_test: .asciz "%d\n"
 	true: .long 0
 	max: .long 0
 	
@@ -372,6 +374,7 @@
 		movl $1, %ebx
 		movl $1, true
 		movl %eax, x
+		movl $1024, linedel
 		jmp DEFRAGMENTATIONloop
 
 		DEFRAGMENTATIONlineAux:
@@ -394,6 +397,9 @@
 			mull %ebx
 			movl $1, %ebx
 			xorl %esi, %esi
+			cmp true, %ebx
+			jne DEFRAGMENTATIONend
+			movl $0, true
 
 		DEFRAGMENTATIONline:
 			cmp $1048576, %eax
@@ -432,6 +438,7 @@
 
 		testare:
 			movl $1, %ebx
+			movl %ebx, true
 			jmp shiftLeft
 
 		DEFRAGMENTATIONstop:
@@ -508,15 +515,15 @@
 			movl %ecx, line
 			leal occupied, %ebx
 			movl %ecx, max
-			addl $1000, max
+			addl $1024, max
 			xorl %esi, %esi
 			xorl %edx, %edx
 			jmp DEFRAGMENTATIONloop2
 
 		DEFRAGMENTATIONloop2:
 			xorl %edx, %edx
-			cmp $10240, %ecx
-			jae DEFRAGMENTATIONlineAux
+			cmp $1048576, %ecx
+			jae DEFRAGMENTATIONend
 			cmp max, %ecx
 			jae DEFRAGMENTATIONlineAux
 			cmp $1024, %esi
@@ -698,6 +705,20 @@
 			popl %ebx
 			popl %ebp
 			ret
+	clear_input_buffer:
+    	movl $3, %eax             # syscall: read
+    	movl $0, %ebx             # file descriptor: stdin
+    	leal -1(%esp), %ecx   # buffer to store input
+    	movl $1, %edx             # read one byte
+		clear_loop:
+    		int $0x80                 # syscall interrupt
+    		cmpb $'\n', (%ecx)        # check if newline
+    		je clear_done             # stop if newline
+    		test %eax, %eax           # check for EOF
+    		je clear_done
+    		jmp clear_loop
+		clear_done:
+    		ret
 
 .global main
 main:
@@ -738,6 +759,7 @@ main:
 		je exit
 
 		pushl %ecx
+		call clear_input_buffer
 		pushl $op
 		pushl $format_scanf
 		call scanf
@@ -745,6 +767,7 @@ main:
 		popl %eax
 		popl %ecx
 
+		movl op, %eax
 		movl op, %ebx
 		cmp $1, %ebx
 		je add
@@ -754,6 +777,8 @@ main:
 		je delete
 		cmp $4, %ebx
 		je defragmentation
+		cmp $5, %ebx
+		je concrete
 
 	add:
 		pushl %ecx
@@ -853,12 +878,21 @@ main:
 		jmp oploop
 
 	defragmentation:
+		pushl %eax
 		pushl %ecx
+		pushl %edx
 		call DEFRAGMENTATION
+		popl %edx
 		popl %ecx
+		popl %eax
+
+		xorl %ebx, %ebx
 		jmp oploop
 
+	concrete:
+		jmp exit
 	exit:
+		leal occupied, %eax
 		movl $1, %eax
 		xorl %ebx, %ebx
 		int $0x80
