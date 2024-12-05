@@ -1,8 +1,8 @@
 .section .note.GNU-stack,"",@progbits
 
 .data
-	space: .space 1000000
-	occupied: .space 2000
+	space: .space 1048576
+	occupied: .space 2048
 	size: .long 0
 	id: .long 0
 	nr_op: .long 0
@@ -19,6 +19,7 @@
 	format_printf: .asciz "%d:((%d, %d), (%d, %d))\n"
 	format_get: .asciz "((%d, %d), (%d, %d))\n"
 	true: .long 0
+	max: .long 0
 	
 .text
    	ADD:
@@ -30,14 +31,14 @@
 		movl %ecx, aux
 		xorl %ebx, %ebx
 		xorl %esi, %esi
-		movl $1000, %edx
+		movl $1024, %edx
 		cmp %edx, %ecx
 		ja impossible
 		xorl %ecx, %ecx
 		jmp ADDinterval
 		
 		ADDlineAux:
-			movl $1000, %ebx
+			movl $1024, %ebx
 			xorl %edx, %edx
 			movl %ecx, %eax
 			divl %ebx
@@ -48,11 +49,11 @@
 			mull %ebx
 			movl %eax, %ecx
 			xorl %ebx, %ebx
-			movl $1000, %edx
+			movl $1024, %edx
 			xorl %esi, %esi
 
 		ADDline:
-			cmp $1000000, %ecx
+			cmp $1048576, %ecx
 			jae ADDexit
 
 		ADDinterval:
@@ -74,7 +75,7 @@
 			subl %esi, %ecx
 
 		intervalSize:
-			cmp $1000, %esi
+			cmp $1024, %esi
 			je ADDlineAux
 			incl %eax
 			incl %esi
@@ -104,7 +105,7 @@
 		ADDstop:
 			xorl %edx, %edx
 			movl %ecx, %eax
-			movl $1000, %ebx
+			movl $1024, %ebx
 			divl %ebx
 			movl %eax, x
 			leal occupied, %edi
@@ -158,7 +159,7 @@
 		jmp GETloop
 
 		GETlineAux:
-			movl $1000, %ebx
+			movl $1024, %ebx
 			xorl %edx, %edx
 			divl %ebx
 			incl %eax
@@ -168,11 +169,11 @@
 			xorl %esi, %esi
 
 		GETline:
-			cmp $1000000, %eax
+			cmp $1048576, %eax
 			jae notFound
 
 		GETloop:
-			cmp $1000, %esi
+			cmp $1024, %esi
 			je GETlineAux
 			addl %esi, %eax
 			cmpb %cl, (%edi, %eax, 1)
@@ -184,7 +185,7 @@
 		start:
 			cmp $-1, %ebx
 			je Left
-			cmp $1000, %esi
+			cmp $1024, %esi
 			je GETstop
 			addl %esi, %eax
 			cmpb %cl, (%edi, %eax, 1)
@@ -205,7 +206,7 @@
 			movl %ebx, left
 			movl %edx, aux
 			xorl %edx, %edx
-			movl $1000, %esi
+			movl $1024, %esi
 			divl %esi
 
 			movl %eax, %ecx
@@ -260,7 +261,7 @@
 		jmp DELETEloop
 
 		DELETElineAux:
-			movl $1000, %ebx
+			movl $1024, %ebx
 			xorl %edx, %edx
 			divl %ebx
 			incl %eax
@@ -271,11 +272,11 @@
 			xorl %esi, %esi
 
 		DELTEline:
-			cmp $1000000, %eax
+			cmp $1048576, %eax
 			jae DELETEstop
 
 		DELETEloop:
-			cmp $1000, %esi
+			cmp $1024, %esi
 			je DELETElineAux
 			addl %esi, %eax
 			cmpb %bl, (%edi, %eax, 1)
@@ -310,7 +311,7 @@
 		DELETEout:
 			cmpb %cl, (%edi, %eax, 1)
 			jne DELETEoutput
-			cmp $1000, %esi
+			cmp $1024, %esi
 			je DELETElineAux
 			subl %esi, %eax
 			incl %esi
@@ -325,7 +326,7 @@
 			decl %edx
 			movl %edx, aux
 			xorl %edx, %edx
-			movl $1000, %esi
+			movl $1024, %esi
 			divl %esi
 			movl %eax, x
 
@@ -375,7 +376,7 @@
 
 		DEFRAGMENTATIONlineAux:
 			movl linedel, %eax
-			movl $1000, %ebx
+			movl $1024, %ebx
 			xorl %edx, %edx
 			divl %ebx
 			movl %eax, linedel
@@ -385,7 +386,7 @@
 			incl linedel
 			movl linedel, %eax
 			xorl %edx, %edx
-			movl $1000, %ebx
+			movl $1024, %ebx
 			mull %ebx
 			movl %eax, linedel
 			movl aux, %eax
@@ -395,7 +396,7 @@
 			xorl %esi, %esi
 
 		DEFRAGMENTATIONline:
-			cmp $1000000, %eax
+			cmp $1048576, %eax
 			jae DEFRAGMENTATIONend
 
 		DEFRAGMENTATIONloop:
@@ -437,7 +438,7 @@
 			xorl %esi, %esi
 		
 		DEFRAGMENTATIONout:
-			cmp $1000, %esi
+			cmp $1024, %esi
 			je DEFRAGMENTATIONloop2Aux
 			movl $-1, %edx
 			movb (%edi, %eax, 1), %bl
@@ -468,7 +469,7 @@
 			subl %esi, %eax
 			pushl %eax
 			pushl %esi
-			movl $1000, %esi
+			movl $1024, %esi
 			xorl %edx, %edx
 			movl left, %eax
 			divl %esi
@@ -501,41 +502,25 @@
 			movl %eax, aux
 			subl %esi, %eax
 			xorl %edx, %edx
-			movl $1000, %ebx
+			movl $1024, %ebx
 			divl %ebx
 			movl linedel, %ecx
 			movl %ecx, line
 			leal occupied, %ebx
+			movl %ecx, max
+			addl $1000, max
 			xorl %esi, %esi
 			xorl %edx, %edx
 			jmp DEFRAGMENTATIONloop2
 
-		DEFRAGMENTATIONloop2line:
-			movl true, %edx
-			cmp $1, %edx
-			jne DEFRAGMENTATIONlineAux
-			movl %ecx, %eax
-			xorl %edx, %edx
-			movl $1000, %esi
-			divl %esi
-			movl %eax, %ecx
-			incl %ecx
-			movl %ecx, line
-			movl %ecx, %eax
-			xorl %edx, %edx
-			mull %esi
-			movl %eax, %ecx
-			xorl %esi, %esi
-			xorl %edx, %edx
-			movl x, %eax
-			movl $0, true
-
 		DEFRAGMENTATIONloop2:
 			xorl %edx, %edx
-			cmp $10000, %ecx
+			cmp $10240, %ecx
 			jae DEFRAGMENTATIONlineAux
-			cmp $1000, %esi
-			je DEFRAGMENTATIONloop2line
+			cmp max, %ecx
+			jae DEFRAGMENTATIONlineAux
+			cmp $1024, %esi
+			je DEFRAGMENTATIONlineAux
 			addl %esi, %ecx
 			movb (%edi, %ecx, 1), %dl
 			cmpb $0, %dl
@@ -545,12 +530,11 @@
 			jmp DEFRAGMENTATIONloop2
 		
 		DEFRAGMENTATIONaddIntervalAux:
-			movl $1, true
 			movl %edx, id
 			movl $-1, %eax
 		
 		DEFRAGMENTATIONaddInterval:
-			cmp $1000, %esi
+			cmp $1024, %esi
 			je DEFRAGMENTATIONaddIntervalStop2
 			cmp $-1, %eax
 			je DEFRAGMENTATIONaddIntervalLeft
@@ -580,7 +564,7 @@
 			movl x, %eax
 			cmpw sizedefrag, %dx
 			jae DEFRAGMENTATIONaddIntervalTrue
-			jmp DEFRAGMENTATIONloop2
+			jmp DEFRAGMENTATIONlineAux
 		
 		DEFRAGMENTATIONaddIntervalTrue:
 			pushl %eax
@@ -621,7 +605,7 @@
 		xorl %ecx, %ecx
 		movl 12(%ebp), %ecx
 		movl x, %eax
-		movl $1000, %esi
+		movl $1024, %esi
 		mull %esi
 		movl %eax, %esi
 
@@ -645,7 +629,7 @@
 
 		ADDdefragStop:
 			movl column, %eax
-			movl $1000, %ebx
+			movl $1024, %ebx
 			xorl %edx, %edx
 			divl %ebx
 			movl %edx, column
@@ -705,7 +689,7 @@
 			movl %edx, %ecx
 			xorl %edx, %edx
 			movl line, %eax
-			movl $1000, %ebx
+			movl $1024, %ebx
 			divl %ebx
 			leal occupied, %ebx
 			movl %ecx, %edx
@@ -728,7 +712,7 @@ main:
 	xorl %ebx, %ebx
 	
 	loopArray:
-		cmp $1000000, %ecx
+		cmp $1048576, %ecx
 		je loopArrayAux
 		movb $0, (%edi, %ecx, 1)
 		incl %ecx
@@ -739,9 +723,9 @@ main:
 		leal occupied, %edi
 	
 	loopArray2:
-		cmp $1000, %ecx
+		cmp $1024, %ecx
 		je end
-		movw $1000, (%edi, %ecx, 2)
+		movw $1024, (%edi, %ecx, 2)
 		incl %ecx
 		jmp loopArray2
 

@@ -1,7 +1,7 @@
 .section .note.GNU-stack,"",@progbits
 
 .data
-	space: .space 1000
+	space: .space 1024
 	size: .long 0
 	id: .long 0
 	nr_op: .long 0
@@ -22,7 +22,7 @@
 		movl 8(%ebp), %ecx
 		movl %ecx, aux
 		xorl %ebx, %ebx
-		movl $1000, %edx
+		movl $1024, %edx
 		xorl %esi, %esi
 		cmp %edx, %ecx
 		ja impossible
@@ -96,7 +96,7 @@
 		movl 8(%ebp), %ecx
 
 		GETloop:
-			cmp $1000, %esi
+			cmp $1024, %esi
 			je notFound
 			cmpb %cl, (%edi, %esi, 1)
 			je start
@@ -148,16 +148,18 @@
 		xorl %esi, %esi
 
 		DELETEloop:
-			cmp $1000, %esi
+			cmp $1024, %esi
 			je DELETEstop
 			cmpb %bl, (%edi, %esi, 1)
 			je DELETEid
-			movb (%edi, %esi, 1), %al
-			cmpb $0, %al
+			movb (%edi, %esi, 1), %bl
+			cmpb $0, %bl
 			je zero
+			movl 8(%ebp), %ebx
 			jmp Aux
 
 		zero:
+			movl 8(%ebp), %ebx
 			incl %esi
 			jmp DELETEloop
 
@@ -206,7 +208,7 @@
 		DEFRAGMENTATIONloop:
 			cmp $1, %ebx
 			jne DEFRAGMENTATIONstop
-			cmp $999, %esi
+			cmp $1023, %esi
 			jae DEFRAGMENTATIONstop
 			movb (%edi, %esi, 1), %dl
 			cmpb $0, %dl
@@ -221,9 +223,9 @@
 			incl %eax
 
 		shiftLeft:
-			cmp $999, %ecx
+			cmp $1023, %ecx
 			jae DEFRAGMENTATIONloop
-			cmp $999, %eax
+			cmp $1023, %eax
 			jae DEFRAGMENTATIONloop
 			movb (%edi, %eax, 1), %dl
 			movb %dl, (%edi, %ecx, 1)
@@ -290,7 +292,7 @@ main:
 	xorl %ecx, %ecx
 
 	looparray:
-		cmp $1000, %ecx
+		cmp $1024, %ecx
 		je end 
 		movb $0, (%edi, %ecx, 1)
 		incl %ecx
