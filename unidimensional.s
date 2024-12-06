@@ -12,6 +12,7 @@
 	format_scanf: .asciz "%d"
 	format_printf: .asciz "%d: (%d, %d)\n"
 	format_get: .asciz "(%d, %d)\n"
+	max: .long 1024
 	
 .text
 	ADD:
@@ -21,11 +22,14 @@
 		xorl %eax, %eax
 		movl 8(%ebp), %ecx
 		movl %ecx, aux
-		xorl %ebx, %ebx
 		movl $1024, %edx
 		xorl %esi, %esi
+		movl max, %ebx
+		cmp %ebx, %ecx
+		ja impossible
 		cmp %edx, %ecx
 		ja impossible
+		xorl %ebx, %ebx
 
 		ADDinterval:
 			xorl %eax, %eax
@@ -66,7 +70,7 @@
 			movl left, %edx
 			movl left, %ebx
 			addl aux, %ebx
-
+			subl %ebx, max
 			decl %ebx
 			pushl %ebx
 			pushl %edx
@@ -82,6 +86,14 @@
 			ret
 		
 		impossible:
+			xorl %ebx, %ebx
+			pushl %ebx
+			pushl %ebx
+			pushl $format_get
+			call printf
+			popl %ebx
+			popl %ebx
+			popl %ebx
 			popl %ebx
 			popl %ebp
 			ret
@@ -166,6 +178,7 @@
 		DELETEid:
 			movb $0, (%edi, %esi, 1)
 			incl %esi
+			incl max
 			jmp DELETEloop
 
 		Aux:
@@ -204,7 +217,11 @@
 		xorl %esi, %esi
 		movl $1, %ebx
 		xorl %edx, %edx
+		jmp DEFRAGMENTATIONloop
 
+		DEFRAGMENTATIONloopAux:
+			movb $0, (%edi, %ecx, 1)
+			
 		DEFRAGMENTATIONloop:
 			cmp $1, %ebx
 			jne DEFRAGMENTATIONstop
@@ -224,9 +241,7 @@
 
 		shiftLeft:
 			cmp $1023, %ecx
-			jae DEFRAGMENTATIONloop
-			cmp $1023, %eax
-			jae DEFRAGMENTATIONloop
+			jae DEFRAGMENTATIONloopAux
 			movb (%edi, %eax, 1), %dl
 			movb %dl, (%edi, %ecx, 1)
 			incl %ecx

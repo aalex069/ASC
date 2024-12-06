@@ -13,6 +13,7 @@
 	x: .long 0
 	line: .long 0
 	linedel: .long 0
+	linemax: .long 0
 	column: .long 0
 	sizedefrag: .long 0
 	format_scanf: .asciz "%d"
@@ -30,6 +31,8 @@
 		pushl %ebx
 		xorl %eax, %eax
 		movl 8(%ebp), %ecx
+		cmp $0, %ecx
+		jle impossible
 		movl %ecx, aux
 		xorl %ebx, %ebx
 		xorl %esi, %esi
@@ -141,6 +144,18 @@
 			ret
 		
 		impossible:
+			xorl %ebx, %ebx
+			pushl %ebx
+			pushl %ebx
+			pushl %ebx
+			pushl %ebx
+			pushl $format_get
+			call printf
+			popl %ebx
+			popl %ebx
+			popl %ebx
+			popl %ebx
+			popl %ebx
 			popl %ebx
 			popl %ebp
 			ret
@@ -372,12 +387,18 @@
 		xorl %edx, %edx
 		xorl %eax, %eax
 		movl $1, %ebx
-		movl $1, true
 		movl %eax, x
 		movl $1024, linedel
 		jmp DEFRAGMENTATIONloop
 
+		DEFRAGMENTATIONloopAux:
+			decl %ecx
+			movl $0, (%edi, %ecx, 1)
+			incl %ecx
+			jmp DEFRAGMENTATIONloop
+
 		DEFRAGMENTATIONlineAux:
+			movl $1, sizedefrag
 			movl linedel, %eax
 			movl $1024, %ebx
 			xorl %edx, %edx
@@ -392,14 +413,13 @@
 			movl $1024, %ebx
 			mull %ebx
 			movl %eax, linedel
+			movl %eax, linemax
+			incl linemax
 			movl aux, %eax
 			xorl %edx, %edx
 			mull %ebx
 			movl $1, %ebx
 			xorl %esi, %esi
-			cmp true, %ebx
-			jne DEFRAGMENTATIONend
-			movl $0, true
 
 		DEFRAGMENTATIONline:
 			cmp $1048576, %eax
@@ -426,7 +446,7 @@
 
 		shiftLeft:
 			cmp linedel, %ecx
-			je DEFRAGMENTATIONloop
+			je DEFRAGMENTATIONloopAux
 			movb (%edi, %ecx, 1), %dl
 			decl %ecx
 			movb %dl, (%edi, %ecx, 1)
@@ -438,7 +458,6 @@
 
 		testare:
 			movl $1, %ebx
-			movl %ebx, true
 			jmp shiftLeft
 
 		DEFRAGMENTATIONstop:
@@ -705,21 +724,7 @@
 			popl %ebx
 			popl %ebp
 			ret
-	clear_input_buffer:
-    	movl $3, %eax             # syscall: read
-    	movl $0, %ebx             # file descriptor: stdin
-    	leal -1(%esp), %ecx   # buffer to store input
-    	movl $1, %edx             # read one byte
-		clear_loop:
-    		int $0x80                 # syscall interrupt
-    		cmpb $'\n', (%ecx)        # check if newline
-    		je clear_done             # stop if newline
-    		test %eax, %eax           # check for EOF
-    		je clear_done
-    		jmp clear_loop
-		clear_done:
-    		ret
-
+	
 .global main
 main:
 	pushl $nr_op
@@ -759,7 +764,6 @@ main:
 		je exit
 
 		pushl %ecx
-		call clear_input_buffer
 		pushl $op
 		pushl $format_scanf
 		call scanf
@@ -767,7 +771,6 @@ main:
 		popl %eax
 		popl %ecx
 
-		movl op, %eax
 		movl op, %ebx
 		cmp $1, %ebx
 		je add
