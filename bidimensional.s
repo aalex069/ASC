@@ -4,6 +4,8 @@
 	op: .long 0
 	space: .space 1048576
 	occupied: .space 2048
+	maybe: .space 10000000
+	fd: .space 256
 	size: .long 0
 	id: .long 0
 	nr_op: .long 0
@@ -31,7 +33,7 @@
 		pushl %ebx
 		xorl %eax, %eax
 		movl 8(%ebp), %ecx
-		cmp $0, %ecx
+		cmp $1, %ecx
 		jle impossible
 		movl %ecx, aux
 		xorl %ebx, %ebx
@@ -39,6 +41,12 @@
 		movl $1024, %edx
 		cmp %edx, %ecx
 		ja impossible
+		leal fd , %edi
+		xorl %ecx, %ecx
+		movl 12(%ebp), %ecx
+		cmpb (%edi, %ecx, 1), %cl
+		jne impossible
+		leal space, %edi
 		xorl %ecx, %ecx
 		jmp ADDinterval
 		
@@ -65,7 +73,11 @@
 			xorl %eax, %eax
 			cmp $0, %edx
 			je ADDlineAux
+			cmp $1024, %esi
+			je ADDlineAux
 			addl %esi, %ecx
+			cmp $1048576, %ecx
+			jae ADDexit
 			cmpb %bl, (%edi, %ecx, 1)
 			je intervalSizeAux
 			subl %esi, %ecx
@@ -87,6 +99,8 @@
 			cmp aux, %eax
 			je stop 
 			addl %esi, %ecx
+			cmp $1048576, %ecx
+			jae ADDexit
 			cmpb %bl, (%edi, %ecx, 1)
 			je ADDsubAux
 			subl %esi, %ecx
@@ -101,6 +115,8 @@
 			cmp $0, %edx
 			je ADDstop
 			addl %esi, %ecx
+			cmp $1048576, %ecx
+			jae ADDexit
 			movb %al, (%edi, %ecx, 1)
 			subl %esi, %ecx
 			incl %esi
@@ -125,37 +141,17 @@
 			movl aux, %ebx
 			addl left, %ebx
 			decl %ebx
-			
-			pushl %ebx
-			pushl x
-			pushl left
-			pushl x
-			pushl 12(%ebp)
-			pushl $format_printf
-			call printf
-			popl %eax
-			popl %eax
-			popl %eax
-			popl %eax
-			popl %eax
-			popl %eax
+			xorl %ecx, %ecx
+			leal fd, %edi
+			movl 12(%ebp), %ecx
+			movb $0, (%edi, %ecx, 1)
+			leal space, %edi
 			popl %ebx
 			popl %ebp
 			ret
 		
 		impossible:
-			xorl %ebx, %ebx
-			pushl %ebx
-			pushl %ebx
-			pushl %ebx
-			pushl %ebx
-			pushl $format_get
-			call printf
-			popl %ebx
-			popl %ebx
-			popl %ebx
-			popl %ebx
-			popl %ebx
+			leal space, %edi
 			popl %ebx
 			popl %ebp
 			ret
@@ -316,6 +312,8 @@
 			leal occupied, %edi
 			movl linedel, %edx
 			addw $1, (%edi, %edx, 2)
+			leal fd, %edi
+			movb %bl, (%edi, %ebx, 1)
 			leal space, %edi
 			incl %esi
 			jmp DELETEloop
@@ -387,8 +385,8 @@
 		xorl %edx, %edx
 		xorl %eax, %eax
 		movl $1, %ebx
+		movl $1, true
 		movl %eax, x
-		movl $1024, linedel
 		jmp DEFRAGMENTATIONloop
 
 		DEFRAGMENTATIONloopAux:
@@ -398,7 +396,6 @@
 			jmp DEFRAGMENTATIONloop
 
 		DEFRAGMENTATIONlineAux:
-			movl $1, sizedefrag
 			movl linedel, %eax
 			movl $1024, %ebx
 			xorl %edx, %edx
@@ -413,8 +410,6 @@
 			movl $1024, %ebx
 			mull %ebx
 			movl %eax, linedel
-			movl %eax, linemax
-			incl linemax
 			movl aux, %eax
 			xorl %edx, %edx
 			mull %ebx
@@ -428,7 +423,7 @@
 		DEFRAGMENTATIONloop:
 			cmp $1, %ebx
 			jne DEFRAGMENTATIONstop
-			cmp $999, %esi
+			cmp $1023, %esi
 			jae DEFRAGMENTATIONstop
 			addl %esi, %eax
 			movb (%edi, %eax, 1), %dl
@@ -533,20 +528,36 @@
 			movl linedel, %ecx
 			movl %ecx, line
 			leal occupied, %ebx
-			movl %ecx, max
-			addl $1024, max
 			xorl %esi, %esi
 			xorl %edx, %edx
 			jmp DEFRAGMENTATIONloop2
 
+		DEFRAGMENTATIONloop2line:
+			movl true, %edx
+			cmp $1, %edx
+			jne DEFRAGMENTATIONlineAux
+			movl %ecx, %eax
+			xorl %edx, %edx
+			movl $1024, %esi
+			divl %esi
+			movl %eax, %ecx
+			incl %ecx
+			movl %ecx, line
+			movl %ecx, %eax
+			xorl %edx, %edx
+			mull %esi
+			movl %eax, %ecx
+			xorl %esi, %esi
+			xorl %edx, %edx
+			movl x, %eax
+			movl $0, true
+
 		DEFRAGMENTATIONloop2:
 			xorl %edx, %edx
-			cmp $1048576, %ecx
-			jae DEFRAGMENTATIONend
-			cmp max, %ecx
+			cmp $10240, %ecx
 			jae DEFRAGMENTATIONlineAux
 			cmp $1024, %esi
-			je DEFRAGMENTATIONlineAux
+			je DEFRAGMENTATIONloop2line
 			addl %esi, %ecx
 			movb (%edi, %ecx, 1), %dl
 			cmpb $0, %dl
@@ -556,6 +567,7 @@
 			jmp DEFRAGMENTATIONloop2
 		
 		DEFRAGMENTATIONaddIntervalAux:
+			movl $1, true
 			movl %edx, id
 			movl $-1, %eax
 		
@@ -590,7 +602,7 @@
 			movl x, %eax
 			cmpw sizedefrag, %dx
 			jae DEFRAGMENTATIONaddIntervalTrue
-			jmp DEFRAGMENTATIONlineAux
+			jmp DEFRAGMENTATIONloop2
 		
 		DEFRAGMENTATIONaddIntervalTrue:
 			pushl %eax
@@ -724,6 +736,103 @@
 			popl %ebx
 			popl %ebp
 			ret
+	AFISARE:
+		pushl %ebp
+		movl %esp, %ebp
+		xorl %esi, %esi
+		xorl %eax, %eax
+		movl %eax, linedel
+		jmp AFISAREloop
+
+		AFISARElineAux:
+			movl $1024, %ebx
+			xorl %edx, %edx
+			divl %ebx
+			incl %eax
+			movl %eax, linedel
+			xorl %edx, %edx
+			mull %ebx
+			xorl %esi, %esi
+
+		AFISAREline:
+			cmp $1048576, %eax
+			jae AFISAREstop
+
+		AFISAREloop:
+			cmp $1024, %esi
+			je AFISARElineAux
+			addl %esi, %eax
+			movb (%edi, %eax, 1), %bl
+			cmpb $0, %bl
+			je AFISAREzero
+			jmp AFISAREaux
+
+		AFISAREzero:
+			subl %esi, %eax
+			incl %esi
+			jmp AFISAREloop
+			
+		AFISAREaux:
+			movb (%edi, %eax, 1), %cl
+			movl %eax, left
+			movl %eax, %edx
+
+		AFISAREout:
+			cmpb %cl, (%edi, %eax, 1)
+			jne AFISAREoutput
+			cmp $1024, %esi
+			je AFISARElineAux
+			subl %esi, %eax
+			incl %esi
+			addl %esi, %eax
+			incl %edx
+			jmp AFISAREout
+
+		AFISAREoutput:
+			subl %esi, %eax
+			movl %eax, line
+			movl %esi, column
+			decl %edx
+			movl %edx, aux
+			xorl %edx, %edx
+			movl $1024, %esi
+			divl %esi
+			movl %eax, x
+
+			movl left, %eax
+			xorl %edx, %edx
+			divl %esi
+			movl %edx, left
+
+			movl aux, %eax
+			xorl %edx, %edx
+			divl %esi
+			movl %edx, aux
+
+			pushl aux
+			pushl x
+			pushl left
+			pushl x
+			pushl %ecx
+			pushl $format_printf
+			call printf
+			popl %ebx
+			popl %ebx
+			popl %ebx
+			popl %ebx
+			popl %ebx
+			popl %ebx
+			pushl $0
+			call fflush
+			popl %ebx
+			movl 8(%ebp), %ebx
+			movl line, %eax
+			movl column, %esi
+			jmp AFISAREloop
+
+		AFISAREstop:
+			popl %ebp
+			ret
 	
 .global main
 main:
@@ -750,11 +859,21 @@ main:
 	
 	loopArray2:
 		cmp $1024, %ecx
-		je end
+		je loopArrayAux2
 		movw $1024, (%edi, %ecx, 2)
 		incl %ecx
 		jmp loopArray2
+	
+	loopArrayAux2:
+		xorl %ecx, %ecx
+		leal fd, %edi
 
+	loopArray3:
+		cmp $256, %ecx
+		je end
+		movb %cl, (%edi, %ecx, 1)
+		incl %ecx
+		jmp loopArray3
 	end:
 		leal space, %edi	
 		movl nr_op, %ecx
@@ -795,7 +914,7 @@ main:
 
 	addloop:
 		cmp $0, %ebx
-		je oploop
+		je addloopAux
 
 		pushl %ecx
 		pushl $id
@@ -841,6 +960,12 @@ main:
 		popl %ecx
 		decl %ebx
 		jmp addloop
+
+	addloopAux:
+		pushl %ecx
+		call AFISARE
+		popl %ecx
+		jmp oploop
 
 	oploop:
 		decl %ecx
@@ -894,8 +1019,11 @@ main:
 
 	concrete:
 		jmp exit
+
 	exit:
-		leal occupied, %eax
+		push $0
+		call fflush
+		pop %ebx
 		movl $1, %eax
 		xorl %ebx, %ebx
 		int $0x80
