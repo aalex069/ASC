@@ -2,6 +2,7 @@
 
 .data
 	space: .space 1024
+	fd: .space 256
 	size: .long 0
 	id: .long 0
 	nr_op: .long 0
@@ -24,11 +25,16 @@
 		movl %ecx, aux
 		movl $1024, %edx
 		xorl %esi, %esi
-		movl max, %ebx
-		cmp %ebx, %ecx
-		ja impossible
 		cmp %edx, %ecx
 		ja impossible
+		cmp $1, %ecx
+		jle impossible
+		leal fd, %edi
+		xorl %ecx, %ecx
+		movl 12(%ebp), %ecx
+		cmpb (%edi, %ecx, 1), %cl
+		jne impossible
+		leal space, %edi
 		xorl %ebx, %ebx
 
 		ADDinterval:
@@ -72,28 +78,17 @@
 			addl aux, %ebx
 			subl %ebx, max
 			decl %ebx
-			pushl %ebx
-			pushl %edx
-			pushl %eax
-			pushl $format_printf
-			call printf
-			popl %eax
-			popl %eax
-			popl %eax
-			popl %eax
+			leal fd, %edi
+			xorl %ecx, %ecx
+			movl 12(%ebp), %ecx
+			movb $0, (%edi, %ecx, 1)
+			leal space, %edi
 			popl %ebx
 			popl %ebp
 			ret
 		
 		impossible:
-			xorl %ebx, %ebx
-			pushl %ebx
-			pushl %ebx
-			pushl $format_get
-			call printf
-			popl %ebx
-			popl %ebx
-			popl %ebx
+			leal space, %ecx
 			popl %ebx
 			popl %ebp
 			ret
@@ -177,6 +172,9 @@
 
 		DELETEid:
 			movb $0, (%edi, %esi, 1)
+			leal fd, %edi
+			movb %bl, (%edi, %ebx, 1)
+			leal space, %edi
 			incl %esi
 			incl max
 			jmp DELETEloop
@@ -294,7 +292,55 @@
 		DEFRAGMENTATIONend:
 			popl %ebp
 			ret
+	AFISARE:
+		pushl %ebp
+		movl %esp, %ebp
+		movl 8(%ebp), %ebx
+		xorl %esi, %esi
 
+		AFISAREloop:
+			cmp $1024, %esi
+			je AFISAREstop
+			movb (%edi, %esi, 1), %bl
+			cmpb $0, %bl
+			je AFISAREzero
+			movl 8(%ebp), %ebx
+			jmp AFISAREaux
+
+		AFISAREzero:
+			movl 8(%ebp), %ebx
+			incl %esi
+			jmp AFISAREloop
+
+		AFISAREaux:
+			movb (%edi, %esi, 1), %cl
+			movl %esi, left
+			movl %esi, %edx
+
+		AFISAREout:
+			cmpb %cl, (%edi, %esi, 1)
+			jne AFISAREoutput
+			incl %esi
+			incl %edx
+			jmp AFISAREout
+
+		AFISAREoutput:
+			decl %edx
+			pushl %edx
+			pushl left
+			pushl %ecx
+			pushl $format_printf
+			call printf
+			popl %ebx
+			popl %ebx
+			popl %ebx
+			popl %ebx
+			movl 8(%ebp), %ebx
+			jmp AFISAREloop
+
+		AFISAREstop:
+			popl %ebp
+			ret
 .global main
 main:
 	pushl $nr_op
@@ -302,18 +348,29 @@ main:
 	call scanf
 	popl %eax
 	popl %eax
-
 	leal space, %edi
 	xorl %ecx, %ecx
 
 	looparray:
 		cmp $1024, %ecx
-		je end 
+		je loopArrayAux
 		movb $0, (%edi, %ecx, 1)
 		incl %ecx
 		jmp looparray
+	
+	loopArrayAux:
+		leal fd, %edi
+		xorl %ecx, %ecx
+	
+	loopArray2:
+		cmp $256, %ecx
+		je end
+		movb %cl, (%edi, %ecx, 1)
+		incl %ecx
+		jmp loopArray2
 
 	end:
+		leal space, %edi	
 		movl nr_op, %ecx
 
 	operations:
@@ -350,7 +407,7 @@ main:
 
 	addloop:
 		cmp $0, %ebx
-		je oploop
+		je afisare
 
 		pushl %ecx
 		pushl $id
@@ -396,6 +453,12 @@ main:
 		popl %ecx
 		decl %ebx
 		jmp addloop
+
+	afisare:
+		pushl %ecx
+		call AFISARE
+		popl %ecx
+		jmp oploop
 
 	oploop:
 		decl %ecx
