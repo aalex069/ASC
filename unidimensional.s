@@ -21,6 +21,7 @@
 		movl %esp, %ebp
 		pushl %ebx
 		xorl %eax, %eax
+		movl max, %ecx
 		movl 8(%ebp), %ecx
 		movl %ecx, aux
 		movl $1024, %edx
@@ -29,6 +30,8 @@
 		ja impossible
 		cmp $1, %ecx
 		jle impossible
+		cmp max, %ecx
+		ja impossible
 		leal fd, %edi
 		xorl %ecx, %ecx
 		movl 12(%ebp), %ecx
@@ -39,6 +42,8 @@
 
 		ADDinterval:
 			xorl %eax, %eax
+			cmp $1024, %esi
+			jae impossible
 			cmp $0, %edx
 			je impossible
 			cmpb %bl, (%edi, %esi, 1)
@@ -52,9 +57,11 @@
 
 		intervalSize:
 			incl %eax
-			incl %esi
 			cmp aux, %eax
 			je stop 
+			incl %esi
+			cmp $1024, %esi
+			je impossible
 			cmpb %bl, (%edi, %esi, 1)
 			je intervalSize
 			jmp ADDinterval
@@ -76,8 +83,19 @@
 			movl left, %edx
 			movl left, %ebx
 			addl aux, %ebx
-			subl %ebx, max
 			decl %ebx
+			pushl %ebx
+			pushl %edx
+			pushl %eax
+			pushl $format_printf
+			call printf
+			popl %eax
+			popl %eax
+			popl %eax
+			popl %eax
+			movl 8(%ebp), %ebx
+			subl %ebx, max
+			movl max, %ebx
 			leal fd, %edi
 			xorl %ecx, %ecx
 			movl 12(%ebp), %ecx
@@ -88,6 +106,16 @@
 			ret
 		
 		impossible:
+			xorl %ebx, %ebx
+			pushl %ebx
+			pushl %ebx
+			pushl 12(%ebp)
+			pushl $format_printf
+			call printf
+			popl %ebx
+			popl %ebx
+			popl %ebx
+			popl %ebx
 			leal space, %ecx
 			popl %ebx
 			popl %ebp
@@ -185,6 +213,8 @@
 			movl %esi, %edx
 
 		DELETEout:
+			cmp $1024, %esi
+			jge DELETEoutput
 			cmpb %cl, (%edi, %esi, 1)
 			jne DELETEoutput
 			incl %esi
@@ -292,55 +322,7 @@
 		DEFRAGMENTATIONend:
 			popl %ebp
 			ret
-	AFISARE:
-		pushl %ebp
-		movl %esp, %ebp
-		movl 8(%ebp), %ebx
-		xorl %esi, %esi
-
-		AFISAREloop:
-			cmp $1024, %esi
-			je AFISAREstop
-			movb (%edi, %esi, 1), %bl
-			cmpb $0, %bl
-			je AFISAREzero
-			movl 8(%ebp), %ebx
-			jmp AFISAREaux
-
-		AFISAREzero:
-			movl 8(%ebp), %ebx
-			incl %esi
-			jmp AFISAREloop
-
-		AFISAREaux:
-			movb (%edi, %esi, 1), %cl
-			movl %esi, left
-			movl %esi, %edx
-
-		AFISAREout:
-			cmpb %cl, (%edi, %esi, 1)
-			jne AFISAREoutput
-			incl %esi
-			incl %edx
-			jmp AFISAREout
-
-		AFISAREoutput:
-			decl %edx
-			pushl %edx
-			pushl left
-			pushl %ecx
-			pushl $format_printf
-			call printf
-			popl %ebx
-			popl %ebx
-			popl %ebx
-			popl %ebx
-			movl 8(%ebp), %ebx
-			jmp AFISAREloop
-
-		AFISAREstop:
-			popl %ebp
-			ret
+	
 .global main
 main:
 	pushl $nr_op
@@ -407,7 +389,7 @@ main:
 
 	addloop:
 		cmp $0, %ebx
-		je afisare
+		je oploop
 
 		pushl %ecx
 		pushl $id
@@ -454,12 +436,6 @@ main:
 		decl %ebx
 		jmp addloop
 
-	afisare:
-		pushl %ecx
-		call AFISARE
-		popl %ecx
-		jmp oploop
-
 	oploop:
 		decl %ecx
 		jmp operations
@@ -505,6 +481,10 @@ main:
 		jmp oploop
 
 	exit:
+		pushl $0
+		call fflush
+		popl %eax
+
 		movl $1, %eax
 		xorl %ebx, %ebx
 		int $0x80
