@@ -1007,18 +1007,16 @@
 		pushl %edi
 		lea directory, %edi
 		xorl %ecx, %ecx
+		xorl %edx, %edx
 		lea concat_string, %esi
 
 		findDirectoryEnd:
 			movb (%edi, %ecx, 1), %al
 			cmpb $0, %al
-			je appendFileName
+			je copyFileName
 			movb %al, (%esi, %ecx, 1)
 			incl %ecx
 			jmp findDirectoryEnd
-		
-		appendFileName:
-			movl $0, %edx
 		
 		copyFileName:
 			movb (%ebx, %edx, 1), %al
@@ -1135,7 +1133,7 @@ main:
 		je defragmentation
 		cmp $5, %ebx
 		je concrete
-
+		jmp oploop
 	add:
 		pushl %ecx
 		pushl $nrf
