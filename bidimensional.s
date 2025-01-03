@@ -5,6 +5,7 @@
 	space: .space 1048576
 	occupied: .space 2048
 	fd: .space 256
+	fd_close: .space 4096
 	size: .long 0
 	id: .long 0
 	nr_op: .long 0
@@ -12,15 +13,31 @@
 	left: .long 0
 	aux: .long 0
 	x: .long 0
+	cnt: .long 0
 	line: .long 0
 	linedel: .long 0
 	linemax: .long 0
 	column: .long 0
+	directory: .space 256
+	directory_fd: .space 256
+	file: .space 256
+	file_fd: .space 256
+	stat_buffer: .space 1024
+	getdentsbuffer: .space 1024
+	concat_string: .space 1024
+	buffer_size: .space 1024
+	current_dir: .asciz "."
+	parent_dir: .asciz ".."
+	sizegetdents: .space 256
 	sizedefrag: .long 0
+	name: .space 256
+	concrete_error: .asciz "director invalid\n"
 	format_scanf: .asciz "%d"
 	format_scanfstr: .asciz "%s"
 	format_printf: .asciz "%d: ((%d, %d), (%d, %d))\n"
 	format_get: .asciz "((%d, %d), (%d, %d))\n"
+	format_concrete: .asciz "(%d, %d)\n"
+	format_test: .asciz "%s\n"
 	true: .long 0
 	max: .long 0
 	rez: .long 0
@@ -771,7 +788,286 @@
 			popl %ebp
 			ret
 	
-	
+	CONCRETE:
+		pushl %ebp
+		movl %esp, %ebp
+		movl $0, cnt
+		cmp $0, %edi
+		jl CONCRETEerror
+
+		movl %edi, directory_fd
+
+		getdents:
+			movl $141, %eax
+			movl directory_fd, %ebx
+			leal getdentsbuffer, %ecx
+			movl $1024, %edx
+			int $0x80
+
+			cmp $0, %eax
+			jl CONCRETEerror
+
+			cmp $0, %eax
+			je CONCRETEclose
+
+			leal getdentsbuffer, %esi
+			movl %eax, buffer_size
+
+		CONCRETEloop:
+			movl %esi, %edi
+			addl $10, %esi
+			leal (%esi), %ebx
+
+			pushl %eax
+			pushl %ecx
+			pushl %edx
+			pushl %ebx
+			call CHECKdots
+			movl %eax, true
+			popl %eax
+			popl %edx
+			popl %ecx
+			popl %eax
+
+			movl true, %ecx
+			cmp $0, %ecx
+			je NextFile
+
+			pushl %eax
+			pushl %ecx
+			pushl %edx
+			call CONCAT
+			popl %edx
+			popl %ecx
+			popl %eax
+
+			pushl %eax
+			pushl %ebx
+			pushl %ecx
+			pushl %edx
+
+			movl $5, %eax
+			leal concat_string, %ebx
+			xorl %ecx, %ecx
+			xorl %edx, %edx
+			int $0x80
+
+			movl %eax, file_fd
+			movl cnt, %eax
+			leal fd_close, %edi
+			movl file_fd, %edx
+			movl %edx, (%edi, %eax, 4)
+			incl cnt
+			movl file_fd, %eax
+			xorl %edx, %edx
+			movl $255, %ebx
+			divl %ebx
+			incl %edx
+			movl %edx, fd
+
+			movl $106, %eax
+			leal concat_string, %ebx
+			movl $stat_buffer, %ecx
+			int $0x80
+
+			movl stat_buffer+20, %eax
+			movl $1024, %ecx
+			xorl %edx, %edx
+			divl %ecx
+			
+			movl %eax, size
+
+			pushl size
+			pushl fd
+			pushl $format_concrete
+			call printf
+			popl %eax
+			popl %eax
+			popl %eax
+
+			movl size, %eax
+			movl $8, %ecx
+			xorl %edx, %edx
+			divl %ecx
+			cmp $0, %edx
+			ja INCREMENT
+			jmp OUTPUT
+
+			INCREMENT:
+				incl %eax
+				
+			OUTPUT:
+
+				pushl %esi
+				pushl fd
+				pushl %eax
+				call ADD
+				popl %eax
+				popl %eax
+				popl %esi
+
+				popl %edx
+				popl %ecx
+				popl %ebx
+				popl %eax
+
+			NextFile:
+				subl $10, %esi
+				xorl %eax, %eax
+				movw 8(%esi), %ax
+				movw %ax, sizegetdents
+				addw sizegetdents, %si
+
+				movl buffer_size, %eax
+				leal getdentsbuffer(%eax), %ebx
+				cmp %ebx, %esi
+				jl CONCRETEloop
+				jmp getdents
+
+			CONCRETEclose:
+				leal fd_close, %edi
+				xorl %ecx, %ecx
+
+				CONCRETEcloseLoop:
+					cmp cnt, %ecx
+					je CONCRETEstop
+					movl (%edi, %ecx, 4), %ebx
+					movl $6, %eax
+					int $0x80
+					incl %ecx
+					jmp CONCRETEcloseLoop
+
+			CONCRETEstop:
+				popl %ebp
+				ret
+
+			CONCRETEerror:
+				pushl $concrete_error
+				pushl $format_test
+				call printf
+				popl %eax
+				popl %eax
+				popl %ebp
+				ret
+	CHECKdots:
+		pushl %ebp
+		movl %esp, %ebp
+		pushl %esi
+		pushl %edi
+		pushl %ebx
+		xorl %eax, %eax
+		xorl %ecx, %ecx
+		movl $current_dir, %esi
+		
+		DOTsingleCmp:
+			movb (%ebx), %al
+			movb (%esi), %cl
+			cmpb %al, %cl
+			jne DOTdoubleCmpAux
+			cmpb $0, %cl
+			je CHECKdotsTrue
+			incl %esi
+			incl %ebx
+			jmp DOTsingleCmp
+
+		DOTdoubleCmpAux:
+			decl %ebx
+			movl $parent_dir, %esi
+
+		DOTdoubleCmp:
+			movb (%ebx), %al
+			movb (%esi), %cl
+			cmpb %al, %cl
+			jne CHECKdotsFalse
+			cmpb $0, %cl
+			je CHECKdotsTrue
+			incl %esi
+			incl %ebx
+			jmp DOTdoubleCmp
+
+		CHECKdotsFalse:
+			movl $1, %eax
+			jmp CHECKdotsEnd
+
+		CHECKdotsTrue:
+			movl $0, %eax
+			jmp CHECKdotsEnd
+			
+		CHECKdotsEnd:
+			popl %ebx
+			popl %edi
+			popl %esi
+			popl %ebp
+			ret
+	CONCAT:
+		pushl %ebp
+		movl %esp, %ebp
+		pushl %ebx
+		pushl %esi
+		pushl %edi
+		lea directory, %edi
+		xorl %ecx, %ecx
+		lea concat_string, %esi
+
+		findDirectoryEnd:
+			movb (%edi, %ecx, 1), %al
+			cmpb $0, %al
+			je appendFileName
+			movb %al, (%esi, %ecx, 1)
+			incl %ecx
+			jmp findDirectoryEnd
+		
+		appendFileName:
+			movl $0, %edx
+		
+		copyFileName:
+			movb (%ebx, %edx, 1), %al
+			movb %al, (%esi, %ecx, 1)
+			cmpb $0, %al
+			je CONCATend
+			incl %edx
+			incl %ecx
+			jmp copyFileName
+
+		CONCATend:
+			popl %edi
+			popl %esi
+			popl %ebx
+			popl %ebp
+			ret
+
+	TESTslash:
+		pushl %ebp
+		movl %esp, %ebp
+		leal directory, %ebx
+		xorl %ecx, %ecx
+		xorl %edx, %edx
+		
+		TESTslashLoop:
+			movb (%ebx, %ecx, 1), %al
+			cmpb $0, %al
+			je TESTslashCheck
+			incl %ecx
+			jmp TESTslashLoop
+
+		TESTslashCheck:
+			decl %ecx
+			movb (%ebx, %ecx, 1), %dl
+			cmpb $'/', %dl
+			jne TESTslashAdd
+			jmp TESTslashEnd
+		
+		TESTslashAdd:
+			incl %ecx
+			movb $'/', %dl
+			movb %dl, (%ebx, %ecx, 1)
+			incl %ecx
+			movb %al, (%ebx, %ecx, 1)
+
+		TESTslashEnd:
+			popl %ebp
+			ret
+
 .global main
 main:
 	pushl $nr_op
@@ -900,6 +1196,7 @@ main:
 		jmp addloop
 
 	oploop:
+		leal space, %edi
 		decl %ecx
 		jmp operations
 
@@ -950,7 +1247,35 @@ main:
 		jmp oploop
 
 	concrete:
-		jmp exit
+		pushl %ecx
+		pushl $directory
+		pushl $format_scanfstr
+		call scanf
+		popl %ecx
+		popl %ecx
+		
+		call TESTslash
+
+		movl $5, %eax
+		lea directory, %ebx
+		movl $0, %ecx
+		int $0x80
+		movl %eax, %edi
+
+		pushl %eax
+		pushl %ecx
+		pushl %edx
+		pushl $directory
+		call CONCRETE
+		movl $6, %eax
+		movl $4, %ebx
+		int $0x80
+		popl %eax
+		popl %edx
+		popl %ecx
+		popl %eax
+		popl %ecx
+		jmp oploop
 
 	exit:
 		push $0
