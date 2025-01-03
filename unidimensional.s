@@ -376,6 +376,7 @@ main:
 		je delete
 		cmp $4, %ebx
 		je defragmentation
+		jmp oploop
 
 	add:
 		pushl %ecx
