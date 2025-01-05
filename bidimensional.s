@@ -841,11 +841,6 @@
 			popl %ecx
 			popl %eax
 
-			pushl %eax
-			pushl %ebx
-			pushl %ecx
-			pushl %edx
-
 			movl $5, %eax
 			leal concat_string, %ebx
 			xorl %ecx, %ecx
@@ -897,7 +892,6 @@
 				incl %eax
 				
 			OUTPUT:
-
 				pushl %esi
 				pushl fd
 				pushl %eax
@@ -905,11 +899,6 @@
 				popl %eax
 				popl %eax
 				popl %esi
-
-				popl %edx
-				popl %ecx
-				popl %ebx
-				popl %eax
 
 			NextFile:
 				subl $10, %esi
@@ -927,11 +916,13 @@
 			CONCRETEclose:
 				leal fd_close, %edi
 				xorl %ecx, %ecx
+				xorl %edx, %edx
 
 				CONCRETEcloseLoop:
 					cmp cnt, %ecx
 					je CONCRETEstop
 					movl (%edi, %ecx, 4), %ebx
+					movl %edx, (%edi, %ecx, 4)
 					movl $6, %eax
 					int $0x80
 					incl %ecx
@@ -1273,6 +1264,7 @@ main:
 		popl %ecx
 		popl %eax
 		popl %ecx
+		movl $0, cnt
 		jmp oploop
 
 	exit:
