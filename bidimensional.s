@@ -23,7 +23,7 @@
 	file: .space 256
 	file_fd: .space 256
 	stat_buffer: .space 1024
-	getdentsbuffer: .space 1024
+	getdents_buffer: .space 1024
 	concat_string: .space 1024
 	buffer_size: .space 1024
 	current_dir: .asciz "."
@@ -797,10 +797,10 @@
 
 		movl %edi, directory_fd
 
-		getdents:
+		GETDENTS:
 			movl $141, %eax
 			movl directory_fd, %ebx
-			leal getdentsbuffer, %ecx
+			leal getdents_buffer, %ecx
 			movl $1024, %edx
 			int $0x80
 
@@ -810,36 +810,21 @@
 			cmp $0, %eax
 			je CONCRETEclose
 
-			leal getdentsbuffer, %esi
+			leal getdents_buffer, %esi
 			movl %eax, buffer_size
 
 		CONCRETEloop:
-			movl %esi, %edi
 			addl $10, %esi
 			leal (%esi), %ebx
 
-			pushl %eax
-			pushl %ecx
-			pushl %edx
-			pushl %ebx
 			call CHECKdots
 			movl %eax, true
-			popl %eax
-			popl %edx
-			popl %ecx
-			popl %eax
 
 			movl true, %ecx
 			cmp $0, %ecx
 			je NextFile
 
-			pushl %eax
-			pushl %ecx
-			pushl %edx
 			call CONCAT
-			popl %edx
-			popl %ecx
-			popl %eax
 
 			movl $5, %eax
 			leal concat_string, %ebx
@@ -862,7 +847,7 @@
 
 			movl $106, %eax
 			leal concat_string, %ebx
-			movl $stat_buffer, %ecx
+			leal stat_buffer, %ecx
 			int $0x80
 
 			movl stat_buffer+20, %eax
@@ -908,10 +893,10 @@
 				addw sizegetdents, %si
 
 				movl buffer_size, %eax
-				leal getdentsbuffer(%eax), %ebx
+				leal getdents_buffer(%eax), %ebx
 				cmp %ebx, %esi
 				jl CONCRETEloop
-				jmp getdents
+				jmp GETDENTS
 
 			CONCRETEclose:
 				leal fd_close, %edi
@@ -1264,13 +1249,13 @@ main:
 		popl %ecx
 		popl %eax
 		popl %ecx
-		movl $0, cnt
 		jmp oploop
 
 	exit:
 		push $0
 		call fflush
 		pop %ebx
+		
 		movl $1, %eax
 		xorl %ebx, %ebx
 		int $0x80
